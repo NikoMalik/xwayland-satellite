@@ -1,5 +1,10 @@
 use std::os::fd::{FromRawFd, OwnedFd, RawFd};
 
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 fn main() {
     pretty_env_logger::formatted_timed_builder()
         .filter_level(log::LevelFilter::Info)
