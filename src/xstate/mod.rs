@@ -693,7 +693,7 @@ impl XState {
     ) -> XResult<bool> {
         let mut motif_popup = false;
         let mut wmhint_popup = false;
-        let mut has_skip_taskbar = false;
+        let mut has_skip_taskbar = None;
 
         let attrs = self
             .connection
@@ -711,7 +711,7 @@ impl XState {
         );
 
         if let Some(states) = window_state.resolve()? {
-            has_skip_taskbar = states.contains(&self.atoms.skip_taskbar);
+            has_skip_taskbar = Some(states.contains(&self.atoms.skip_taskbar));
         }
         if let Some(hints) = motif_hints {
             // If MOTIF_WM_HINTS provides no decorations for client assume its a popup
@@ -761,15 +761,14 @@ impl XState {
             match ty {
                 x if x == self.window_atoms.normal => is_popup = override_redirect || wmhint_popup,
                 x if x == self.window_atoms.dialog => is_popup = override_redirect,
-                x if x == self.window_atoms.utility => {
-                    is_popup = override_redirect || motif_popup;
-                }
+                x if x == self.window_atoms.utility => is_popup = override_redirect || motif_popup,
                 x if [
                     self.window_atoms.menu,
                     self.window_atoms.popup_menu,
                     self.window_atoms.dropdown_menu,
                     self.window_atoms.tooltip,
                     self.window_atoms.drag_n_drop,
+                    self.window_atoms.combo,
                 ]
                 .contains(&x) =>
                 {
@@ -785,7 +784,9 @@ impl XState {
         }
 
         if !known_window_type {
-            is_popup = has_skip_taskbar;
+            if let Some(has_skip_taskbar) = has_skip_taskbar {
+                is_popup = has_skip_taskbar || override_redirect;
+            }
         }
 
         Ok(is_popup)
@@ -1068,6 +1069,7 @@ xcb::atoms_struct! {
         dropdown_menu => b"_NET_WM_WINDOW_TYPE_DROPDOWN_MENU" only_if_exists = false,
         utility => b"_NET_WM_WINDOW_TYPE_UTILITY" only_if_exists = false,
         tooltip => b"_NET_WM_WINDOW_TYPE_TOOLTIP" only_if_exists = false,
+        combo => b"_NET_WM_WINDOW_TYPE_COMBO" only_if_exists = false,
     }
 }
 
